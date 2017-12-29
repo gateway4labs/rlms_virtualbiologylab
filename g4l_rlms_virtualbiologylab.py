@@ -81,11 +81,41 @@ def get_laboratories():
     for anchor_link in soup.find_all('a'):
         if ' html ' in anchor_link.text.lower():
             href = anchor_link['href']
-            identifier = href.rsplit('/', 1)[-1]
+            identifier = urlparse.urlparse(href).path
             identifiers[identifier] = {
                 'name': anchor_link.parent.find("strong").text.splitlines()[0].strip(),
                 'link': href,
             }
+
+    model_links = soup.find_all(class_='menu-text', text=re.compile('.*[mM]odel.*'))
+    menu_links = []
+    for model_link in model_links:
+        for menu_link in model_link.parent.find_next('ul').find_all('a'):
+            menu_links.append(menu_link)
+
+    for link in menu_links: # they're few: 5-10
+        html = requests.get(link['href']).text
+        soup_link = BeautifulSoup(html, 'lxml')
+        for launch_model in soup_link.find_all(text=re.compile('.*launch model.*', flags=re.IGNORECASE)):
+            final_link = launch_model.find_parent('a')
+            if final_link:
+                href = final_link['href']
+                name = href.rsplit('/')[-1].split('.')[0]
+
+                # If possible, take the name
+                column_wrapper = final_link.find_parent(class_='fusion-column-wrapper')
+                if column_wrapper:
+                    model_name = column_wrapper.find('strong')
+                    if model_name and u'\u2013' in model_name:
+                        name = model_name.split('\u2013', 1)[1].strip()
+
+                identifier = urlparse.urlparse(href).path
+                identifiers[identifier] = {
+                    'name': name,
+                    'link': href,
+                }
+
+
 
     labs = []
     for identifier, identifier_data in identifiers.items():
@@ -120,7 +150,7 @@ class RLMS(BaseRLMS):
         return [ 'https://virtualbiologylab.org', 'http://virtualbiologylab.org', 'https://www.virtualbiologylab.org', 'http://www.virtualbiologylab.org' ]
 
     def get_lab_by_url(self, url):
-        identifier = url.rsplit('/', 1)[-1]
+        identifier = urlparse.urlparse(url).path
 
         laboratories, identifiers = get_laboratories()
         for lab in laboratories:
