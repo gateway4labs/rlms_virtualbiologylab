@@ -81,7 +81,7 @@ def get_laboratories():
     for anchor_link in soup.find_all('a'):
         if ' html ' in anchor_link.text.lower():
             href = anchor_link['href']
-            identifier = urlparse.urlparse(href).path
+            identifier = create_identifier(href)
             identifiers[identifier] = {
                 'name': anchor_link.parent.find("strong").text.splitlines()[0].strip(),
                 'link': href,
@@ -109,7 +109,7 @@ def get_laboratories():
                     if model_name and u'\u2013' in model_name:
                         name = model_name.split('\u2013', 1)[1].strip()
 
-                identifier = urlparse.urlparse(href).path
+                identifier = create_identifier(href)
                 identifiers[identifier] = {
                     'name': name,
                     'link': href,
@@ -126,6 +126,10 @@ def get_laboratories():
     VIRTUALBIOLOGYLAB.rlms_cache['get_laboratories'] = (labs, identifiers)
     return labs, identifiers
 
+def create_identifier(url):
+    path = urlparse.urlparse(url).path
+    identifier = path[1:].replace('/', '_').replace('.html', '')
+    return identifier
 
 FORM_CREATOR = VirtualBiologyLabFormCreator()
 
@@ -150,7 +154,7 @@ class RLMS(BaseRLMS):
         return [ 'https://virtualbiologylab.org', 'http://virtualbiologylab.org', 'https://www.virtualbiologylab.org', 'http://www.virtualbiologylab.org' ]
 
     def get_lab_by_url(self, url):
-        identifier = urlparse.urlparse(url).path
+        identifier = create_identifier(url)
 
         laboratories, identifiers = get_laboratories()
         for lab in laboratories:
