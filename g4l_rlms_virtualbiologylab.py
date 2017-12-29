@@ -108,12 +108,15 @@ def get_laboratories():
                     model_name = column_wrapper.find('strong')
                     if model_name and u'\u2013' in model_name:
                         name = model_name.split('\u2013', 1)[1].strip()
+                    elif model_name and u'-' in model_name:
+                        name = model_name.split('-', 1)[1].strip()
 
                 identifier = create_identifier(href)
-                identifiers[identifier] = {
-                    'name': name,
-                    'link': href,
-                }
+                if identifier not in identifiers:
+                    identifiers[identifier] = {
+                        'name': name,
+                        'link': href,
+                    }
 
 
 
