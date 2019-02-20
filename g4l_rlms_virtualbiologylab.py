@@ -78,6 +78,12 @@ def get_laboratories():
         #     'link': link,
         # }
     }
+
+    identifiers['ModelsHTML5_IslandBiogeography_IslandBiogeography'] = {
+        'name': 'IslandBiogeography',
+        'link': 'http://virtualbiologylab.org/ModelsHTML5/IslandBiogeography/IslandBiogeography.html',
+    }
+
     for anchor_link in soup.find_all('a'):
         if ' html ' in anchor_link.text.lower():
             href = anchor_link['href']
