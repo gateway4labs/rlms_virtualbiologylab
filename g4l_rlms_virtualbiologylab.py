@@ -185,6 +185,9 @@ class RLMS(BaseRLMS):
             raise LabNotFoundError("Laboratory not found: {}".format(laboratory_id))
 
         url = identifiers[laboratory_id]['link']
+        if url.startswith('http://'):
+            url = 'https://gateway.golabz.eu/proxy/{}'.format(url)
+
         response = {
             'reservation_id' : url,
             'load_url' : url,
