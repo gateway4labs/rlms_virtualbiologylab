@@ -16,6 +16,7 @@ import functools
 import traceback
 import pprint
 
+import webpage2html
 import requests
 from bs4 import BeautifulSoup
 
@@ -64,7 +65,7 @@ class VirtualBiologyLabFormCreator(BaseFormCreator):
 MIN_TIME = datetime.timedelta(hours=24)
 
 def get_laboratories():
-    labs_and_identifiers  = VIRTUALBIOLOGYLAB.rlms_cache.get('get_laboratories',  min_time = MIN_TIME)
+    labs_and_identifiers  = VIRTUALBIOLOGYLAB.global_cache.get('get_laboratories',  min_time = MIN_TIME)
     if labs_and_identifiers:
         labs, identifiers = labs_and_identifiers
         return labs, identifiers
@@ -124,6 +125,11 @@ def get_laboratories():
                         'link': href,
                     }
 
+    for identifier in identifiers:
+        if 'NetWebHTML' in identifier:
+            identifiers[identifier]['download'] = True
+        else:
+            identifiers[identifier]['download'] = False
 
 
     labs = []
@@ -132,7 +138,7 @@ def get_laboratories():
         lab = Laboratory(name=name, laboratory_id=identifier, description=name)
         labs.append(lab)
 
-    VIRTUALBIOLOGYLAB.rlms_cache['get_laboratories'] = (labs, identifiers)
+    VIRTUALBIOLOGYLAB.global_cache['get_laboratories'] = (labs, identifiers)
     return labs, identifiers
 
 def create_identifier(url):
@@ -142,7 +148,7 @@ def create_identifier(url):
 
 FORM_CREATOR = VirtualBiologyLabFormCreator()
 
-CAPABILITIES = [ Capabilities.WIDGET, Capabilities.URL_FINDER, Capabilities.CHECK_URLS ]
+CAPABILITIES = [ Capabilities.WIDGET, Capabilities.URL_FINDER, Capabilities.CHECK_URLS, Capabilities.DOWNLOAD_LIST ]
 
 class RLMS(BaseRLMS):
 
@@ -202,7 +208,21 @@ class RLMS(BaseRLMS):
 
     def list_widgets(self, laboratory_id, **kwargs):
         default_widget = dict( name = 'default', description = 'Default widget' )
+
         return [ default_widget ]
+
+    def get_downloads(self, laboratory_id):
+        laboratories, identifiers = get_laboratories()
+
+        if laboratory_id not in identifiers:
+            return {}
+        
+        if not identifiers[laboratory_id].get('download'):
+            return {}
+
+        return {
+            'en_ALL': url_for('virtualbiologylab.virtualbiologylab_download', laboratory_id=laboratory_id, _external=True),
+        }
 
 
 class VirtualBiologyLabTaskQueue(QueueTask):
@@ -224,6 +244,22 @@ if DEBUG_LOW_LEVEL:
     print("Debug low level activated")
 
 sys.stdout.flush()
+
+virtualbiologylab_blueprint = Blueprint('virtualbiologylab', __name__)
+
+@virtualbiologylab_blueprint.route('/id/<path:laboratory_id>')
+def virtualbiologylab_download(laboratory_id):
+    labs, identifiers = get_laboratories()
+    
+    if laboratory_id not in (identifiers or {}):
+        return "Not found", 404
+
+    link = identifiers[laboratory_id]['link']
+
+    generated = webpage2html.generate(index=link, keep_script=True, verbose=False, verify=False)
+    return generated.encode()
+
+register_blueprint(virtualbiologylab_blueprint, url='/virtualbiologylab')
 
 if __name__ == '__main__':
     rlms = RLMS('{}')
