@@ -257,7 +257,7 @@ def virtualbiologylab_download(laboratory_id):
     link = identifiers[laboratory_id]['link']
 
     generated = webpage2html.generate(index=link, keep_script=True, verbose=False, verify=False)
-    return generated.encode()
+    return generated
 
 register_blueprint(virtualbiologylab_blueprint, url='/virtualbiologylab')
 
